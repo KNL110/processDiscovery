@@ -1,2 +1,12 @@
 /dataset_*
 /projREADME.md
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Generated analysis artifacts (keep the directory itself)
+/outputs/*
+!/outputs/.gitkeep
