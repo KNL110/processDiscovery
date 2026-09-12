@@ -1,21 +1,40 @@
 import json
+import statistics
 from datetime import datetime
 import pathlib
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 requiredFields = ("event_id", "session_id", "timestamp_ms", "timestamp_iso", "correlation")
 
-def integrityCheck(events: List[Dict[str, Any]]) -> tuple[bool, set]:
-    # Validate raw events and return issues grouped by event ID.
+def fiveNumberSummary(values: List[float]) -> Optional[Dict[str, float]]:
+    if not values:
+        return None
+    sortedVals = sorted(values)
+    if len(sortedVals) == 1:
+        q1 = q3 = sortedVals[0]
+    else:
+        q1, _, q3 = statistics.quantiles(sortedVals, n=4)
+    return {
+        "count": len(sortedVals),
+        "min": sortedVals[0],
+        "q1": q1,
+        "median": statistics.median(sortedVals),
+        "q3": q3,
+        "max": sortedVals[-1],
+    }
+
+def integrityCheck(events: List[Dict[str, Any]]) -> tuple[bool, set, Dict[str, List[float]]]:
+    # Validate raw events and return issues, plus raw values for timestamp_ms backward
+    # jumps and negative ms_since_last_event so callers can pool them across sessions.
     failedIntigrity = set()
+    timestampBackwardDeltas = []
+    negativeMsSinceLastEvent = []
 
-    def addIssue(index: int, event: Dict[str, Any], issue: str) -> None:
+    def addIssue(issue: str) -> None:
         failedIntigrity.add(issue)
-        eventId = event.get("event_id") or f"<missing event_id @ index {index}>"
-
     if not events:
         failedIntigrity.add("no events")
-        return False, failedIntigrity
+        return False, failedIntigrity, {"timestamp_ms_backward_delta": [], "negative_ms_since_last_event": []}
 
     seenEventIds = set()
     sessionIds = set()
@@ -23,12 +42,12 @@ def integrityCheck(events: List[Dict[str, Any]]) -> tuple[bool, set]:
     for i, event in enumerate(events):
         for field in requiredFields:
             if event.get(field) is None:
-                addIssue(i, event, f"missing field: {field}")
+                addIssue(f"missing field: {field}")
 
         eventId = event.get("event_id")
         if eventId is not None:
             if eventId in seenEventIds:
-                addIssue(i, event, "duplicate event_id")
+                addIssue(f"duplicate event_id: {eventId}")
             seenEventIds.add(eventId)
 
         sessionId = event.get("session_id")
@@ -39,7 +58,8 @@ def integrityCheck(events: List[Dict[str, Any]]) -> tuple[bool, set]:
         correlation = event.get("correlation") or {}
         sourceDelta = correlation.get("ms_since_last_event")
         if sourceDelta is not None and sourceDelta < 0:
-            addIssue(i, event, "negative ms_since_last_event")
+            addIssue(f"negative ms_since_last_event: {sourceDelta}")
+            negativeMsSinceLastEvent.append(sourceDelta)
 
         if i == 0:
             continue
@@ -49,19 +69,24 @@ def integrityCheck(events: List[Dict[str, Any]]) -> tuple[bool, set]:
         prevSeq = (prev.get("correlation") or {}).get("sequence_number")
         if currSeq is not None and prevSeq is not None:
             if currSeq < prevSeq:
-                addIssue(i, event, "sequence went backwards")
+                addIssue(f"sequence went backwards: {currSeq} < {prevSeq}")
             elif currSeq == prevSeq:
-                addIssue(i, event, "duplicate sequence_number")
+                addIssue(f"duplicate sequence_number: {currSeq}")
 
         timestampMs = event.get("timestamp_ms")
         prevTs, currTs = prev.get("timestamp_ms"), timestampMs
         if prevTs is not None and currTs is not None and currTs < prevTs:
-            addIssue(i, event, "timestamp_ms went backwards")
+            addIssue(f"timestamp_ms went backwards: {currTs} < {prevTs}")
+            timestampBackwardDeltas.append(prevTs - currTs)
 
     if len(sessionIds) > 1:
         failedIntigrity.add("multiple session")
 
-    return (not failedIntigrity), failedIntigrity
+    rawValues = {
+        "timestamp_ms_backward_delta": timestampBackwardDeltas,
+        "negative_ms_since_last_event": negativeMsSinceLastEvent,
+    }
+    return (not failedIntigrity), failedIntigrity, rawValues
 
 def loadEvents(filePath: pathlib.Path) -> List[Dict[str, Any]]:
     events = []
@@ -101,15 +126,16 @@ if __name__ == "__main__":
     sessions = listSessions(pathlib.Path(datasetPath))
     sessionPath = "./dataset_a/ses_20260630-121953-LAPTOP-R36BQBTE"
     cnt = 0
-    fails = set()
+    allTimestampBackwardDeltas = []
+    allNegativeMsSinceLastEvent = []
     for session in sessions:
         sessionPath = session
         Events = loadSession(sessionPath)
-        isIntegrityValid, failedIntegrity = integrityCheck(Events)
+        isIntegrityValid, failedIntegrity, rawValues = integrityCheck(Events)
+        allTimestampBackwardDeltas.extend(rawValues["timestamp_ms_backward_delta"])
+        allNegativeMsSinceLastEvent.extend(rawValues["negative_ms_since_last_event"])
         if not isIntegrityValid:
-            # print(f"Integrity check failed for session {sessionPath}: {failedIntegrity}")
-            # print("="*50)
-            fails.update(failedIntegrity)
             cnt += 1
     print(f"Total sessions with structural integrity issues: {cnt}")
-    print(f"Total structural integrity issues: {fails}")
+    print(f"timestamp_ms_backward_delta: {fiveNumberSummary(allTimestampBackwardDeltas)}")
+    print(f"negative_ms_since_last_event: {fiveNumberSummary(allNegativeMsSinceLastEvent)}")
