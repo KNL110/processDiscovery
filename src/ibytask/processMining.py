@@ -1,50 +1,71 @@
 import json
 from datetime import datetime
 import pathlib
-from collections import Counter
 from typing import List, Dict, Any
 
-def integrityCheck(events: List[Dict[str, Any]]) -> tuple[bool, set, Dict[str, List[str]]]:
-    """Validate raw events and return issues grouped by event ID."""
-    failedIntigrity = set()
-    eventIssues = {}
+requiredFields = ("event_id", "session_id", "timestamp_ms", "timestamp_iso", "correlation")
 
-    def addIssue(event: Dict[str, Any], issue: str) -> None:
+def integrityCheck(events: List[Dict[str, Any]]) -> tuple[bool, set]:
+    # Validate raw events and return issues grouped by event ID.
+    failedIntigrity = set()
+
+    def addIssue(index: int, event: Dict[str, Any], issue: str) -> None:
         failedIntigrity.add(issue)
-        eventIssues.setdefault(event["event_id"], []).append(issue)
+        eventId = event.get("event_id") or f"<missing event_id @ index {index}>"
 
     if not events:
         failedIntigrity.add("no events")
-        return False, failedIntigrity, eventIssues
+        return False, failedIntigrity
 
-    session_ids = {event["session_id"] for event in events}
+    seenEventIds = set()
+    sessionIds = set()
 
-    for i in range(1,len(events)):
-        prev = events[i-1]
-        curr = events[i]
-        prevSeq = prev["correlation"]["sequence_number"]
-        currSeq = curr["correlation"]["sequence_number"]
-        if currSeq <= prevSeq:
-            addIssue(curr, "sequence went backwards")
-        # if currSeq != prevSeq + 1:
-        #     addIssue(curr, "sequence break")
+    for i, event in enumerate(events):
+        for field in requiredFields:
+            if event.get(field) is None:
+                addIssue(i, event, f"missing field: {field}")
 
-        sourceDelta = curr["correlation"]["ms_since_last_event"]
+        eventId = event.get("event_id")
+        if eventId is not None:
+            if eventId in seenEventIds:
+                addIssue(i, event, "duplicate event_id")
+            seenEventIds.add(eventId)
+
+        sessionId = event.get("session_id")
+        if sessionId is not None:
+            sessionIds.add(sessionId)
+
+
+        correlation = event.get("correlation") or {}
+        sourceDelta = correlation.get("ms_since_last_event")
         if sourceDelta is not None and sourceDelta < 0:
-            addIssue(curr, "negative source ms_since_last_event")
+            addIssue(i, event, "negative ms_since_last_event")
 
-        if curr["timestamp_ms"] < prev["timestamp_ms"]:
-            addIssue(curr, "raw timestamp went backwards")
+        if i == 0:
+            continue
+        prev = events[i - 1]
 
-    if len(session_ids) != 1:
+        currSeq = correlation.get("sequence_number")
+        prevSeq = (prev.get("correlation") or {}).get("sequence_number")
+        if currSeq is not None and prevSeq is not None:
+            if currSeq < prevSeq:
+                addIssue(i, event, "sequence went backwards")
+            elif currSeq == prevSeq:
+                addIssue(i, event, "duplicate sequence_number")
+
+        timestampMs = event.get("timestamp_ms")
+        prevTs, currTs = prev.get("timestamp_ms"), timestampMs
+        if prevTs is not None and currTs is not None and currTs < prevTs:
+            addIssue(i, event, "timestamp_ms went backwards")
+
+    if len(sessionIds) > 1:
         failedIntigrity.add("multiple session")
-    if failedIntigrity:
-        return False, failedIntigrity, eventIssues
-    return True, failedIntigrity, eventIssues
 
-def loadEvents(filePath: str) -> List[Dict[str, Any]]:
+    return (not failedIntigrity), failedIntigrity
+
+def loadEvents(filePath: pathlib.Path) -> List[Dict[str, Any]]:
     events = []
-    with open(filePath, 'r') as f:
+    with open(filePath, 'r', encoding='utf-8') as f:
         for line in f:
             if line.strip():
                 event = json.loads(line)
@@ -52,66 +73,39 @@ def loadEvents(filePath: str) -> List[Dict[str, Any]]:
                 events.append(event)
     return events
 
-def loadSession(dirPath: str) -> List:
+def loadSession(dirPath: pathlib.Path) -> List:
     chunkPath = pathlib.Path(dirPath)
     chunks = [d for d in chunkPath.iterdir() if d.is_dir() and d.name.startswith("chunk_")]
-    chunks.sort(key=lambda d: d.name)
     events = []
     for chunk in chunks:
-        events.extend(loadEvents(f"{chunk}/events.jsonl"))
+        events.extend(loadEvents(chunk / "events.jsonl"))
     events.sort(key=lambda d: d["correlation"]["sequence_number"])
-    return [event for event in events if event["event_type"] != "screenshot_smart"]
+    return normalizeTimestamps(events)
 
-def normalizeEvents(events: List[Dict[str, Any]],integrityIssues: Dict[str, List[str]]) -> tuple[List[Dict[str, Any]], Dict[str, Counter]]:
-    """Create a process-mining-safe timeline without changing raw event fields.
+def listSessions(datasetDir: pathlib.Path) -> list[pathlib.Path]:
+    return sorted(d for d in datasetDir.iterdir() if d.is_dir() and d.name.startswith("ses_"))
 
-    Raw-data issues are detected only by ``integrityCheck`` and passed in here.
-    Add future source-validation rules to ``integrityCheck``. Add only
-    normalization-specific rules, such as a new repair strategy, to this function.
-    """
-    normalizedEvents = []
-    issueCounts = Counter()
-    previousEvent = None
-    previousNormalizedTimestamp = None
+def normalizeTimestamps(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    lastTs = None
     for event in events:
-        normalizedEvent = event.copy()
-        issues = list(integrityIssues.get(event["event_id"], []))
-        rawTimestamp = event["timestamp_ms"]
+        ts = event["timestamp_dt"]
+        if lastTs is not None and ts < lastTs:
+            ts = lastTs
+        event["normalized_ts"] = ts
+        lastTs = ts
+    return events
 
-        normalizedTimestamp = rawTimestamp if previousNormalizedTimestamp is None else max(
-            rawTimestamp, previousNormalizedTimestamp
-        )
-        if normalizedTimestamp != rawTimestamp:
-            issues.append("timestamp clamped")
-
-        normalizedEvent["normalized_timestamp_ms"] = normalizedTimestamp
-        normalizedEvent["normalized_ms_since_last_event"] = (
-            None if previousNormalizedTimestamp is None
-            else normalizedTimestamp - previousNormalizedTimestamp
-        )
-        normalizedEvent["normalization_issues"] = issues
-
-        issueCounts.update(issues)
-        normalizedEvents.append(normalizedEvent)
-        previousEvent = event
-        previousNormalizedTimestamp = normalizedTimestamp
-
-    return normalizedEvents, issueCounts
 
 if __name__ == "__main__":
     datasetPath = "./dataset_a"
-    sessions = [d for d in pathlib.Path(datasetPath).iterdir() if d.is_dir()]
+    sessions = listSessions(pathlib.Path(datasetPath))
     sessionPath = "./dataset_a/ses_20260630-121953-LAPTOP-R36BQBTE"
     cnt = 0
     fails = set()
-    normalizationIssues = Counter()
     for session in sessions:
         sessionPath = session
-        rawEvents = loadSession(str(sessionPath))
-        isIntegrityValid, failedIntegrity, sessionIntegrityIssues = integrityCheck(rawEvents)
-        events, sessionNormalizationIssues = normalizeEvents(rawEvents, sessionIntegrityIssues)
-        normalizationIssues.update(sessionNormalizationIssues)
-
+        Events = loadSession(sessionPath)
+        isIntegrityValid, failedIntegrity = integrityCheck(Events)
         if not isIntegrityValid:
             # print(f"Integrity check failed for session {sessionPath}: {failedIntegrity}")
             # print("="*50)
@@ -119,4 +113,3 @@ if __name__ == "__main__":
             cnt += 1
     print(f"Total sessions with structural integrity issues: {cnt}")
     print(f"Total structural integrity issues: {fails}")
-    print(f"Normalization issues: {dict(normalizationIssues)}")
