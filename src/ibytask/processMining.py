@@ -9,12 +9,17 @@ def integrityCheck(events: List[Dict[str, Any]]) -> bool:
     if not events:
         failedIntigrity.add("no events")
 
+    prev = -1
     for i, event in enumerate(events):
         seq = event["correlation"]["sequence_number"]
 
         if seq != i:
             # print(f"sequence break at index {i}: expected {i}, got {seq}")
             failedIntigrity.add("sequence break")
+        if seq <= prev:
+            # print(f"sequence went backwards at index {i}: expected > {prev}, got {seq}")
+            failedIntigrity.add("sequence went backwards")
+        prev = seq
 
     session_ids = {event["session_id"] for event in events}
 
@@ -33,14 +38,6 @@ def integrityCheck(events: List[Dict[str, Any]]) -> bool:
     return True
 
 def loadEvents(filePath: str) -> List[Dict[str, Any]]:
-    """
-    Load events from a JSON file.
-    Args:
-        filePath (str): The path to the JSON file containing events.
-
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries representing the events.
-    """
     events = []
     with open(filePath, 'r') as f:
         for line in f:
@@ -51,7 +48,6 @@ def loadEvents(filePath: str) -> List[Dict[str, Any]]:
     return events
 
 def loadSession(dirPath: str) -> List:
-    # get directory names where events.jsonl files are located pattern is chucnk_YYYYMMDD-HHMM-<MachineName>
     chunkPath = pathlib.Path(dirPath)
     chunks = [d for d in chunkPath.iterdir() if d.is_dir()]
     chunks.sort(key=lambda d: d.name)
