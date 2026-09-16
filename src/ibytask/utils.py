@@ -3,7 +3,6 @@ from typing import Any, Counter, Dict
 from urllib.parse import urlparse
 
 asciiTokenPattern = re.compile(r"[A-Za-z0-9_]{2,}")
-caseIdPattern = re.compile(r"[A-Z]{2,4}-\d{4,6}-\d{3,4}")
 
 def tokenizeText(text: str | None) -> set[str]:
     #for rough topical similarity
@@ -83,10 +82,8 @@ def SegmentFingerprint(events: list[Dict[str, Any]]) -> Dict[str, Any]:
             domains[sig["domain"]] += 1
         if sig["path"]:
             paths[sig["path"]] += 1
-        if sig["textTokens"]:
-            textTokens.update(sig["textTokens"])
-        if sig["action"]:
-            actionSeq.append(sig["action"])
+        textTokens.update(sig["textTokens"])
+        actionSeq.append(sig["action"])
 
     return {
         "apps": dict(apps),
@@ -94,4 +91,5 @@ def SegmentFingerprint(events: list[Dict[str, Any]]) -> Dict[str, Any]:
         "paths": dict(paths),
         "textTokens": dict(textTokens),
         "actionSeq": actionSeq,
+        "eventCount": len(events),
     }
