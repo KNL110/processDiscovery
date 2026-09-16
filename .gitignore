@@ -10,3 +10,6 @@ __pycache__/
 # Generated analysis artifacts (keep the directory itself)
 /outputs/*
 !/outputs/.gitkeep
+
+# MISC
+/.ENV
