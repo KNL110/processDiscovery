@@ -26,6 +26,19 @@ def IsWorkEvent(event: dict[str, Any]) -> bool:
     return True
 
 @dataclass
+class MicroUnit:
+    events: list[dict[str, Any]]
+    startTs: Any
+    endTs: Any
+    app: str | None
+    domain: str | None
+    path: str | None
+    elementAnchor: str | None
+    caseIds: set[str]
+    textTokens: set[str]
+    isBoundarySignal: bool
+    
+@dataclass
 class Thread:
     threadId = None
     events = None

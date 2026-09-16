@@ -1,5 +1,15 @@
+import re
 from typing import Any, Counter, Dict
 from urllib.parse import urlparse
+
+asciiTokenPattern = re.compile(r"[A-Za-z0-9_]{2,}")
+caseIdPattern = re.compile(r"[A-Z]{2,4}-\d{4,6}-\d{3,4}")
+
+def tokenizeText(text: str | None) -> set[str]:
+    #for rough topical similarity
+    if not text:
+        return set()
+    return {t.lower() for t in asciiTokenPattern.findall(text)}
 
 def BrowserTab(event : dict[str,Any]):
     tab = event.get("context", {}).get("active_browser_tab")
@@ -7,6 +17,7 @@ def BrowserTab(event : dict[str,Any]):
         return None, None
     parsedUrl = urlparse(tab["url"])
     return parsedUrl.netloc, parsedUrl.path
+
 
 def AppOrProcessName(event: dict[str, Any]) -> str | None:
     activeApp = event.get("context", {}).get("active_app")
@@ -44,7 +55,8 @@ def EventSignature(event : Dict[str, Any]) -> Dict[str, Any]:
         "app": AppOrProcessName(event),
         "domain":domain,
         "path": path,
-        "action": ActionTaken(event)
+        "action": ActionTaken(event),
+        "textTokens": tokenizeText(ExtractedText(event)),
     }
 
 def AppContext(eventSig: Dict[str, Any]) -> str | None:
