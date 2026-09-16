@@ -88,14 +88,18 @@ def integrityCheck(events: List[Dict[str, Any]]) -> tuple[bool, set, Dict[str, L
     }
     return (not failedIntigrity), failedIntigrity, rawValues
 
-def loadEvents(filePath: pathlib.Path) -> List[Dict[str, Any]]:
-    events = []
+def readJsonlFile(filePath: pathlib.Path) -> List[Dict[str, Any]]:
+    records = []
     with open(filePath, 'r', encoding='utf-8') as f:
         for line in f:
             if line.strip():
-                event = json.loads(line)
-                event['timestamp_dt'] = datetime.fromisoformat(event["timestamp_iso"].replace("Z", "+00:00"))
-                events.append(event)
+                records.append(json.loads(line))
+    return records
+
+def loadEvents(filePath: pathlib.Path) -> List[Dict[str, Any]]:
+    events = readJsonlFile(filePath)
+    for event in events:
+        event['timestamp_dt'] = datetime.fromisoformat(event["timestamp_iso"].replace("Z", "+00:00"))
     return events
 
 def loadSession(dirPath: pathlib.Path) -> List:
