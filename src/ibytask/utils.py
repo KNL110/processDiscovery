@@ -67,3 +67,31 @@ def AppContext(eventSig: Dict[str, Any]) -> str | None:
     return eventSig["app"]
 
 
+
+def SegmentFingerprint(events: list[Dict[str, Any]]) -> Dict[str, Any]:
+    apps : Counter = Counter()
+    domains : Counter = Counter()
+    paths : Counter = Counter()
+    textTokens : Counter = Counter()
+    actionSeq : list[str] = []
+    for event in events:
+        sig = EventSignature(event)
+        appContext = AppContext(sig)
+        if appContext:
+            apps[appContext] += 1
+        if sig["domain"]:
+            domains[sig["domain"]] += 1
+        if sig["path"]:
+            paths[sig["path"]] += 1
+        if sig["textTokens"]:
+            textTokens.update(sig["textTokens"])
+        if sig["action"]:
+            actionSeq.append(sig["action"])
+
+    return {
+        "apps": dict(apps),
+        "domains": dict(domains),
+        "paths": dict(paths),
+        "textTokens": dict(textTokens),
+        "actionSeq": actionSeq,
+    }

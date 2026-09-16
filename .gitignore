@@ -13,4 +13,4 @@ __pycache__/
 
 # MISC
 /.ENV
-/exampleEvent.json
+/exampleEvent.jsonl
