@@ -1,3 +1,4 @@
+import heapq
 from dataclasses import dataclass, field
 from typing import Any, Dict
 
@@ -163,30 +164,154 @@ def TimeDecay(gapSeconds: float, resumeWindowSeconds: float) -> float:
         return 1.0
     return max(1.0 - gapSeconds / resumeWindowSeconds, 0.0)
 
-def isContinuation(
-    unit: MicroUnit, thread: Thread, resumeWindowSeconds: float, joinThreshold: float,
+def OverlapAwareGap(unit: MicroUnit, thread: Thread) -> float:
+    return max(0.0, (unit.startTs - thread.lastUnit().endTs).total_seconds())
+
+def ContinuationScore(
+    unit: MicroUnit, thread: Thread, resumeWindowSeconds: float,
     boundaryTsSorted: list,
     appDomainWeight: float = 0.7, textWeight: float = 0.3, timeDecayWeight: float = 0.3,
     boundaryPenalty: float = 0.3
-) -> bool:
-    """ checks if the unit is continuation of the give thread, the hyperparameters resumewindowseconds
-    is determined from the analysis of the given data,and jointheshold is the threshold for the probabilistic score of continuation,
+) -> float:
+    """ probabilistic measure of whether unit continues thread, range: [0, 1.0].
+    the hyperparameter resumeWindowSeconds is determined from the analysis of the given data,
     and boundaryTsSorted is a sorted list of timestamps of boundary signals in the session.
+    Callers compare this against a joinThreshold themselves - kept separate so multiple
+    open threads can be scored and ranked rather than stopping at the first passing one.
     """
     last = thread.lastUnit()
-    gapSeconds = (unit.startTs - last.endTs).total_seconds()
+    rawGapSeconds = (unit.startTs - last.endTs).total_seconds()
 
-    if gapSeconds > resumeWindowSeconds:
-        return False
+    if rawGapSeconds > resumeWindowSeconds:
+        return -1.0
     if unit.caseIds & thread.seenCaseIds:
-        return True
+        return 1.0
     if unit.elementAnchor and unit.elementAnchor == last.elementAnchor and IsCaseSpecificAnchor(unit.elementAnchor):
-        return True
+        return 1.0
 
+    gapSeconds = OverlapAwareGap(unit, thread)
     baseScore = appDomainWeight * AppDomainSimilarity(unit, thread) + textWeight * TextOverlap(unit, thread)
 
     #entropy based descision fxn, to believe  timedecay can be more promissing or not
     score = TimeDecay(gapSeconds, resumeWindowSeconds)*timeDecayWeight + baseScore * (1-timeDecayWeight)
     if BoundarySignalBetween(last.endTs, unit.startTs, boundaryTsSorted):
-        score -= boundaryPenalty
-    return score >= joinThreshold
+        score = max(score-boundaryPenalty,0)
+    return score
+
+def SpansCanTouch(a: Thread, b: Thread, resumeWindowSeconds: float) -> bool:
+    """
+    cheap-ish prune: true iff at least one cross-thread pair would land adjacent to
+    each other after interleaving a.units and b.units by startTs, with gap
+    <= resumeWindowSeconds. A thread's own units are each individually time sorted
+    already (attach() appends, TryMerge's interleave sorts), so this is a real
+    two-pointer merge scan rather than a bounding-box check: a thread's outer span
+    (first unit start to last unit end) can be many multiples of resumeWindowSeconds
+    wide once it has several units, so "do the outer spans overlap" stops reflecting
+    "is anything actually close in time" and degenerates into an almost-always-true
+    check. Same worst case O(n+m) as TryMerge's interleave, but skips ContinuationScore
+    entirely and exits the moment one qualifying cross-adjacency is found.
+    """
+    i = j = 0
+    na, nb = len(a.units), len(b.units)
+    prevFrom: str | None = None
+    prevUnit: MicroUnit | None = None
+
+    while i < na and j < nb:
+        if a.units[i].startTs <= b.units[j].startTs:
+            curFrom, curUnit = 'a', a.units[i]
+            i += 1
+        else:
+            curFrom, curUnit = 'b', b.units[j]
+            j += 1
+        if prevFrom is not None and prevUnit is not None and prevFrom != curFrom:
+            gap = max(0.0, (curUnit.startTs - prevUnit.endTs).total_seconds())
+            if gap <= resumeWindowSeconds:
+                return True
+        prevFrom, prevUnit = curFrom, curUnit
+
+    remaining, remainingFrom = (a.units[i:], 'a') if i < na else (b.units[j:], 'b')
+    if remaining and prevUnit is not None and prevFrom != remainingFrom:
+        gap = max(0.0, (remaining[0].startTs - prevUnit.endTs).total_seconds())
+        return gap <= resumeWindowSeconds
+    return False
+
+def TryMerge(
+    a: Thread, b: Thread, resumeWindowSeconds: float, joinThreshold: float, boundaryTsSorted: list
+) -> tuple[list[MicroUnit], float] | None:
+    """ 
+    interleave a and b by time and validate the merge.
+    """
+    owner = {id(u): 0 for u in a.units}
+    owner.update({id(u): 1 for u in b.units})
+    merged = sorted(a.units + b.units, key=lambda u: u.startTs)
+
+    prefix = Thread(threadId=-1)
+    prefix.attach(merged[0])
+    weakest = 1.0
+
+    for i in range(1, len(merged)):
+        prev, nxt = merged[i - 1], merged[i]
+        if owner[id(prev)] != owner[id(nxt)]:
+            score = ContinuationScore(nxt, prefix, resumeWindowSeconds, boundaryTsSorted)
+            if score < joinThreshold:
+                return None
+            weakest = min(weakest, score)
+        prefix.attach(nxt)
+
+    return merged, weakest
+
+def AssignThreads(units: list[MicroUnit], resumeWindowSeconds: float, joinThreshold: float) -> list[list[MicroUnit]]:
+    """ agglomerative: every unit starts as its own thread, then the best scoring admissible
+    merge is applied repeatedly until none is left.
+    """
+    boundaryTsSorted = sorted(u.startTs for u in units if u.isBoundarySignal)
+    work = [u for u in units if not u.isBoundarySignal]  # boundary units are signal only, never members
+    if not work:
+        return []
+
+    live: dict[int, Thread] = {}
+    for i, unit in enumerate(work):
+        thread = Thread(threadId=i)
+        thread.attach(unit)
+        live[i] = thread
+    nextId = len(work)
+
+    heap: list[tuple[float, int, int]] = []
+
+    def pushPair(x: Thread, y: Thread) -> None:
+        if not SpansCanTouch(x, y, resumeWindowSeconds):
+            return
+        result = TryMerge(x, y, resumeWindowSeconds, joinThreshold, boundaryTsSorted)
+        if result:
+            heapq.heappush(heap, (-result[1], x.threadId, y.threadId))
+
+    threads = list(live.values())
+    for i, x in enumerate(threads):
+        for y in threads[i + 1:]:
+            if not SpansCanTouch(x, y, resumeWindowSeconds):
+                break  # work is time sorted, so everything further out is further away
+            pushPair(x, y)
+
+    while heap:
+        _, idX, idY = heapq.heappop(heap)
+        # lazy invalidation: any merge consuming x or y removed it from live, and while both
+        # are live neither has changed, so a surviving entry's score is still current
+        if idX not in live or idY not in live:
+            continue
+        x, y = live.pop(idX), live.pop(idY)
+        result = TryMerge(x, y, resumeWindowSeconds, joinThreshold, boundaryTsSorted)
+        if result is None:
+            live[idX], live[idY] = x, y
+            continue
+
+        mergedUnits, _ = result
+        merged = Thread(threadId=nextId)
+        nextId += 1
+        for unit in mergedUnits:
+            merged.attach(unit)
+        for other in live.values():
+            pushPair(merged, other)
+        live[merged.threadId] = merged
+
+    finished = sorted(live.values(), key=lambda t: t.units[0].startTs)
+    return [t.units for t in finished]

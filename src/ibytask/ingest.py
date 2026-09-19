@@ -99,7 +99,7 @@ def readJsonlFile(filePath: pathlib.Path) -> List[Dict[str, Any]]:
 def loadEvents(filePath: pathlib.Path) -> List[Dict[str, Any]]:
     events = readJsonlFile(filePath)
     for event in events:
-        event['timestamp_dt'] = datetime.fromisoformat(event["timestamp_iso"].replace("Z", "+00:00"))
+        event['timestampDt'] = datetime.fromisoformat(event["timestamp_iso"].replace("Z", "+00:00"))
     return events
 
 def loadSession(dirPath: pathlib.Path) -> List:
@@ -117,10 +117,10 @@ def listSessions(datasetDir: pathlib.Path) -> list[pathlib.Path]:
 def normalizeTimestamps(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     lastTs = None
     for event in events:
-        ts = event["timestamp_dt"]
+        ts = event["timestampDt"]
         if lastTs is not None and ts < lastTs:
             ts = lastTs
-        event["normalized_ts"] = ts
+        event["normalizedTs"] = ts
         lastTs = ts
     return events
 
