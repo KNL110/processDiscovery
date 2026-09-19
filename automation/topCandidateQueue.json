@@ -1,0 +1,42 @@
+[
+  {
+    "caseId": "P0-2026-8841",
+    "employeeId": "E1042",
+    "changeType": "Dependent Deduction Change",
+    "effectiveDate": "2026-07-08",
+    "requiresManagerApproval": false,
+    "status": "pending"
+  },
+  {
+    "caseId": "P0-2026-8842",
+    "employeeId": "E1077",
+    "changeType": "Overtime Allowance Adjustment",
+    "effectiveDate": "2026-07-08",
+    "requiresManagerApproval": false,
+    "status": "pending"
+  },
+  {
+    "caseId": "P0-2026-8843",
+    "employeeId": "E1103",
+    "changeType": "Pay Raise",
+    "effectiveDate": "2026-07-10",
+    "requiresManagerApproval": true,
+    "status": "pending"
+  },
+  {
+    "caseId": "P0-2026-8844",
+    "employeeId": "E1156",
+    "changeType": "Position Allowance Establishment",
+    "effectiveDate": "2026-07-10",
+    "requiresManagerApproval": true,
+    "status": "pending"
+  },
+  {
+    "caseId": "P0-2026-8845",
+    "employeeId": "E1189",
+    "changeType": "Position Allowance Abolition",
+    "effectiveDate": "2026-07-12",
+    "requiresManagerApproval": true,
+    "status": "pending"
+  }
+]

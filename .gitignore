@@ -14,3 +14,4 @@ __pycache__/
 # MISC
 /.ENV
 /exampleEvent.jsonl
+/todo.txt

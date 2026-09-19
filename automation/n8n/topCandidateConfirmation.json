@@ -1,0 +1,191 @@
+{
+  "name": "Top Candidate Confirmation",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:5133/queue",
+        "options": {}
+      },
+      "id": "getQueue",
+      "name": "Get Queue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "isRoutine",
+              "type": "boolean",
+              "value": "={{ [\"Dependent Deduction Change\", \"Overtime Allowance Adjustment\"].includes($json.changeType) && !$json.requiresManagerApproval }}"
+            },
+            {
+              "id": "a2",
+              "name": "note",
+              "type": "string",
+              "value": "=Payroll change registered. Change type: {{ $json.changeType }}. Effective date: {{ $json.effectiveDate }}. Confirmation complete."
+            },
+            {
+              "id": "a3",
+              "name": "reason",
+              "type": "string",
+              "value": "=requires manager approval: {{ $json.changeType }}"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "computeDecision",
+      "name": "Compute Decision",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.isRoutine }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "isRoutineIf",
+      "name": "Is Routine?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://host.docker.internal:5133/queue/{{ $json.caseId }}/approve",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"note\": {{ JSON.stringify($json.note) }}\n}",
+        "options": {}
+      },
+      "id": "approveReq",
+      "name": "Approve",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://host.docker.internal:5133/queue/{{ $json.caseId }}/flag",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"reason\": {{ JSON.stringify($json.reason) }}\n}",
+        "options": {}
+      },
+      "id": "flagReq",
+      "name": "Flag",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        420
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Queue": {
+      "main": [
+        [
+          {
+            "node": "Compute Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Decision": {
+      "main": [
+        [
+          {
+            "node": "Is Routine?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Routine?": {
+      "main": [
+        [
+          {
+            "node": "Approve",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Flag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "topCandidateConfirmation"
+  }
+}
