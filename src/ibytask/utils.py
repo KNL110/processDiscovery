@@ -47,10 +47,10 @@ def ActionTaken(event : dict[str,Any]) -> str | None:
     
     return eventType
 
-def isCaseSpecificAnchor(anchor: str | None) -> bool:
+def IsCaseSpecificAnchor(anchor: str | None) -> bool:
     return bool(anchor and caseIdPattern.search(anchor))
 
-def elementAnchorOf(event: dict[str, Any]) -> str | None:
+def ElementAnchor(event: dict[str, Any]) -> str | None:
     payload = event.get("payload", {}) or {}
     targetField = payload.get("target_field")
     if targetField:
@@ -60,18 +60,18 @@ def elementAnchorOf(event: dict[str, Any]) -> str | None:
         return (element.get("attributes") or {}).get("id")
     return None
 
-def _allStrings(value: Any):
+def AllStrings(value: Any):
     if isinstance(value, str):
         yield value
     elif isinstance(value, dict):
         for v in value.values():
-            yield from _allStrings(v)
+            yield from AllStrings(v)
     elif isinstance(value, list):
         for v in value:
-            yield from _allStrings(v)
+            yield from AllStrings(v)
 
-def caseIds(event: dict[str, Any]) -> set[str]:
-    sources = list(_allStrings(event.get("payload", {})))
+def CaseIds(event: dict[str, Any]) -> set[str]:
+    sources = list(AllStrings(event.get("payload", {})))
     text = ExtractedText(event)
     if text:
         sources.append(text)
