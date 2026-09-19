@@ -156,10 +156,18 @@ def BoundarySignalBetween(fromTs, toTs, boundaryTsSorted: list) -> bool:
         return True
     return False
 
+def TimeDecay(gapSeconds: float, resumeWindowSeconds: float) -> float:
+    """ a naive probabilistic decay function for the time gap between two units, range: [0.0, 1.0] 
+     more time gap between two units, less likely they are in the same thread"""
+    if gapSeconds <= 0:
+        return 1.0
+    return max(1.0 - gapSeconds / resumeWindowSeconds, 0.0)
+
 def isContinuation(
     unit: MicroUnit, thread: Thread, resumeWindowSeconds: float, joinThreshold: float,
     boundaryTsSorted: list,
-    appDomainWeight: float = 0.7, textWeight: float = 0.3
+    appDomainWeight: float = 0.7, textWeight: float = 0.3, timeDecayWeight: float = 0.3,
+    boundaryPenalty: float = 0.3
 ) -> bool:
     """ checks if the unit is continuation of the give thread, the hyperparameters resumewindowseconds
     is determined from the analysis of the given data,and jointheshold is the threshold for the probabilistic score of continuation,
@@ -176,7 +184,9 @@ def isContinuation(
         return True
 
     baseScore = appDomainWeight * AppDomainSimilarity(unit, thread) + textWeight * TextOverlap(unit, thread)
-    score = baseScore * TimeDecay(gapSeconds, resumeWindowSeconds)
+
+    #entropy based descision fxn, to believe  timedecay can be more promissing or not
+    score = TimeDecay(gapSeconds, resumeWindowSeconds)*timeDecayWeight + baseScore * (1-timeDecayWeight)
     if BoundarySignalBetween(last.endTs, unit.startTs, boundaryTsSorted):
-        score -= 0.3
+        score -= boundaryPenalty
     return score >= joinThreshold
