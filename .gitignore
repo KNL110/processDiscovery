@@ -7,9 +7,6 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
-# Generated analysis artifacts (keep the directory itself)
-/outputs/*
-!/outputs/.gitkeep
 
 # MISC
 /.ENV

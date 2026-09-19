@@ -1,0 +1,254 @@
+[
+  {
+    "label": "process_0",
+    "executionCount": 60,
+    "totalSeconds": 1058.567,
+    "avgSeconds": 17.642783333333334,
+    "medianSeconds": 16.249,
+    "distinctSessions": 13,
+    "distinctOperators": 4,
+    "distinctMachines": 4,
+    "dominantApps": [
+      "Microsoft Edge"
+    ],
+    "branchingFactor": 2.4444444444444446,
+    "dominantPathCoverage": 0.6283367556468172,
+    "distinctPatterns": 19,
+    "dominantPatternShare": 0.21666666666666667,
+    "priorityScore": 0.5058841771690068
+  },
+  {
+    "label": "process_1",
+    "executionCount": 73,
+    "totalSeconds": 1629.921,
+    "avgSeconds": 22.32768493150685,
+    "medianSeconds": 17.588,
+    "distinctSessions": 14,
+    "distinctOperators": 4,
+    "distinctMachines": 4,
+    "dominantApps": [
+      "Microsoft Edge"
+    ],
+    "branchingFactor": 3.8,
+    "dominantPathCoverage": 0.6060732113144759,
+    "distinctPatterns": 22,
+    "dominantPatternShare": 0.1780821917808219,
+    "priorityScore": 0.5
+  },
+  {
+    "label": "process_2",
+    "executionCount": 51,
+    "totalSeconds": 785.2379999999999,
+    "avgSeconds": 15.396823529411764,
+    "medianSeconds": 12.813,
+    "distinctSessions": 12,
+    "distinctOperators": 4,
+    "distinctMachines": 4,
+    "dominantApps": [
+      "Microsoft Edge"
+    ],
+    "branchingFactor": 3.076923076923077,
+    "dominantPathCoverage": 0.6004842615012107,
+    "distinctPatterns": 15,
+    "dominantPatternShare": 0.19607843137254902,
+    "priorityScore": 0.3106804206351717
+  },
+  {
+    "label": "process_3",
+    "executionCount": 1,
+    "totalSeconds": 72.187,
+    "avgSeconds": 72.187,
+    "medianSeconds": 72.187,
+    "distinctSessions": 1,
+    "distinctOperators": 1,
+    "distinctMachines": 1,
+    "dominantApps": [
+      "Microsoft Edge"
+    ],
+    "branchingFactor": 2.0,
+    "dominantPathCoverage": 0.6376811594202898,
+    "distinctPatterns": 1,
+    "dominantPatternShare": 1.0,
+    "priorityScore": 0.031869600987248045
+  },
+  {
+    "label": "process_7",
+    "executionCount": 1,
+    "totalSeconds": 55.852,
+    "avgSeconds": 55.852,
+    "medianSeconds": 55.852,
+    "distinctSessions": 1,
+    "distinctOperators": 1,
+    "distinctMachines": 1,
+    "dominantApps": [
+      "Microsoft Edge"
+    ],
+    "branchingFactor": 2.0,
+    "dominantPathCoverage": 0.6666666666666666,
+    "distinctPatterns": 1,
+    "dominantPatternShare": 1.0,
+    "priorityScore": 0.023028210179912967
+  },
+  {
+    "label": "process_12",
+    "executionCount": 1,
+    "totalSeconds": 49.39,
+    "avgSeconds": 49.39,
+    "medianSeconds": 49.39,
+    "distinctSessions": 1,
+    "distinctOperators": 1,
+    "distinctMachines": 1,
+    "dominantApps": [
+      "Microsoft Edge"
+    ],
+    "branchingFactor": 2.0,
+    "dominantPathCoverage": 0.675,
+    "distinctPatterns": 1,
+    "dominantPatternShare": 1.0,
+    "priorityScore": 0.019530624174587025
+  },
+  {
+    "label": "process_4",
+    "executionCount": 1,
+    "totalSeconds": 33.312,
+    "avgSeconds": 33.312,
+    "medianSeconds": 33.312,
+    "distinctSessions": 1,
+    "distinctOperators": 1,
+    "distinctMachines": 1,
+    "dominantApps": [
+      "Microsoft Edge"
+    ],
+    "branchingFactor": 1.8,
+    "dominantPathCoverage": 0.6774193548387096,
+    "distinctPatterns": 1,
+    "dominantPatternShare": 1.0,
+    "priorityScore": 0.011343970786695244
+  },
+  {
+    "label": "process_9",
+    "executionCount": 1,
+    "totalSeconds": 31.449,
+    "avgSeconds": 31.449,
+    "medianSeconds": 31.449,
+    "distinctSessions": 1,
+    "distinctOperators": 1,
+    "distinctMachines": 1,
+    "dominantApps": [
+      "Microsoft Edge"
+    ],
+    "branchingFactor": 1.6,
+    "dominantPathCoverage": 0.7419354838709677,
+    "distinctPatterns": 1,
+    "dominantPatternShare": 1.0,
+    "priorityScore": 0.01075521485738204
+  },
+  {
+    "label": "process_5",
+    "executionCount": 1,
+    "totalSeconds": 28.27,
+    "avgSeconds": 28.27,
+    "medianSeconds": 28.27,
+    "distinctSessions": 1,
+    "distinctOperators": 1,
+    "distinctMachines": 1,
+    "dominantApps": [
+      "Microsoft Edge"
+    ],
+    "branchingFactor": 1.4,
+    "dominantPathCoverage": 0.75,
+    "distinctPatterns": 1,
+    "dominantPatternShare": 1.0,
+    "priorityScore": 0.009256378296625975
+  },
+  {
+    "label": "process_10",
+    "executionCount": 1,
+    "totalSeconds": 21.432,
+    "avgSeconds": 21.432,
+    "medianSeconds": 21.432,
+    "distinctSessions": 1,
+    "distinctOperators": 1,
+    "distinctMachines": 1,
+    "dominantApps": [
+      "Microsoft Edge"
+    ],
+    "branchingFactor": 1.8,
+    "dominantPathCoverage": 0.7272727272727273,
+    "distinctPatterns": 1,
+    "dominantPatternShare": 1.0,
+    "priorityScore": 0.0046076730287256595
+  },
+  {
+    "label": "process_6",
+    "executionCount": 1,
+    "totalSeconds": 21.053,
+    "avgSeconds": 21.053,
+    "medianSeconds": 21.053,
+    "distinctSessions": 1,
+    "distinctOperators": 1,
+    "distinctMachines": 1,
+    "dominantApps": [
+      "Microsoft Edge"
+    ],
+    "branchingFactor": 1.8,
+    "dominantPathCoverage": 0.7272727272727273,
+    "distinctPatterns": 1,
+    "dominantPatternShare": 1.0,
+    "priorityScore": 0.004392769253450369
+  },
+  {
+    "label": "process_13",
+    "executionCount": 1,
+    "totalSeconds": 19.629,
+    "avgSeconds": 19.629,
+    "medianSeconds": 19.629,
+    "distinctSessions": 1,
+    "distinctOperators": 1,
+    "distinctMachines": 1,
+    "dominantApps": [
+      "Microsoft Edge"
+    ],
+    "branchingFactor": 2.0,
+    "dominantPathCoverage": 0.6363636363636364,
+    "distinctPatterns": 1,
+    "dominantPatternShare": 1.0,
+    "priorityScore": 0.0034223516421658844
+  },
+  {
+    "label": "process_11",
+    "executionCount": 1,
+    "totalSeconds": 15.211,
+    "avgSeconds": 15.211,
+    "medianSeconds": 15.211,
+    "distinctSessions": 1,
+    "distinctOperators": 1,
+    "distinctMachines": 1,
+    "dominantApps": [
+      "Microsoft Edge"
+    ],
+    "branchingFactor": 1.8,
+    "dominantPathCoverage": 0.7142857142857143,
+    "distinctPatterns": 1,
+    "dominantPatternShare": 1.0,
+    "priorityScore": 0.0010801891606845172
+  },
+  {
+    "label": "process_8",
+    "executionCount": 1,
+    "totalSeconds": 13.306,
+    "avgSeconds": 13.306,
+    "medianSeconds": 13.306,
+    "distinctSessions": 1,
+    "distinctOperators": 1,
+    "distinctMachines": 1,
+    "dominantApps": [
+      "Microsoft Edge"
+    ],
+    "branchingFactor": 1.6,
+    "dominantPathCoverage": 0.6875,
+    "distinctPatterns": 1,
+    "dominantPatternShare": 1.0,
+    "priorityScore": 0.0
+  }
+]
