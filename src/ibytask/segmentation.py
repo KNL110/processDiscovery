@@ -140,4 +140,8 @@ def AppDomainSimilarity(unit: MicroUnit, thread: Thread) -> float:
     return 1 - (1 - appScore) * (1 - locationScore)
 
 
-
+def TextOverlap(unit: MicroUnit, thread: Thread) -> float:
+    if not unit.textTokens or not thread.textTokens:
+        return 0.0
+    union = unit.textTokens | thread.textTokens
+    return len(unit.textTokens & thread.textTokens) / len(union) if union else 0.0
