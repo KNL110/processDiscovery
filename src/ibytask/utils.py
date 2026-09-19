@@ -3,6 +3,7 @@ from typing import Any, Counter, Dict
 from urllib.parse import urlparse
 
 asciiTokenPattern = re.compile(r"[A-Za-z0-9_]{2,}")
+caseIdPattern = re.compile(r"[A-Z]{2,4}-\d{4,6}-\d{3,4}")
 
 def tokenizeText(text: str | None) -> set[str]:
     #for rough topical similarity
@@ -46,6 +47,41 @@ def ActionTaken(event : dict[str,Any]) -> str | None:
     
     return eventType
 
+def isCaseSpecificAnchor(anchor: str | None) -> bool:
+    return bool(anchor and caseIdPattern.search(anchor))
+
+def elementAnchorOf(event: dict[str, Any]) -> str | None:
+    payload = event.get("payload", {}) or {}
+    targetField = payload.get("target_field")
+    if targetField:
+        return targetField.get("automation_id") or targetField.get("name")
+    element = payload.get("element")
+    if element:
+        return (element.get("attributes") or {}).get("id")
+    return None
+
+def _allStrings(value: Any):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for v in value.values():
+            yield from _allStrings(v)
+    elif isinstance(value, list):
+        for v in value:
+            yield from _allStrings(v)
+
+def caseIds(event: dict[str, Any]) -> set[str]:
+    sources = list(_allStrings(event.get("payload", {})))
+    text = ExtractedText(event)
+    if text:
+        sources.append(text)
+    activeApp = event.get("context", {}).get("active_app")
+    if activeApp and activeApp.get("window_title"):
+        sources.append(activeApp["window_title"])
+    found: set[str] = set()
+    for s in sources:
+        found.update(caseIdPattern.findall(s))
+    return found
 
 
 def EventSignature(event : Dict[str, Any]) -> Dict[str, Any]:

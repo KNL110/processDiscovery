@@ -24,3 +24,4 @@
 - built `analysis/groundTruth.py` (using copilot) to ground hyperparameters in real data: execution duration distribution, resume gaps, noise_block types/durations, split task counts
 - built `analysis/apps.py`(using copilot): inventories every distinct app across all sessions in both datasets (22 in A, 12 in B, 9 shared) -- useful for auditing which apps should count as noise
 
+## Day 5
