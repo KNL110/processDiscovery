@@ -147,7 +147,7 @@ def TextOverlap(unit: MicroUnit, thread: Thread) -> float:
     union = unit.textTokens | thread.textTokens
     return len(unit.textTokens & thread.textTokens) / len(union) if union else 0.0
 
-def boundarySignalBetween(fromTs, toTs, boundaryTsSorted: list) -> bool:
+def BoundarySignalBetween(fromTs, toTs, boundaryTsSorted: list) -> bool:
     for ts in boundaryTsSorted:
         if ts <= fromTs:
             continue
@@ -156,4 +156,27 @@ def boundarySignalBetween(fromTs, toTs, boundaryTsSorted: list) -> bool:
         return True
     return False
 
+def isContinuation(
+    unit: MicroUnit, thread: Thread, resumeWindowSeconds: float, joinThreshold: float,
+    boundaryTsSorted: list,
+    appDomainWeight: float = 0.7, textWeight: float = 0.3
+) -> bool:
+    """ checks if the unit is continuation of the give thread, the hyperparameters resumewindowseconds
+    is determined from the analysis of the given data,and jointheshold is the threshold for the probabilistic score of continuation,
+    and boundaryTsSorted is a sorted list of timestamps of boundary signals in the session.
+    """
+    last = thread.lastUnit()
+    gapSeconds = (unit.startTs - last.endTs).total_seconds()
 
+    if gapSeconds > resumeWindowSeconds:
+        return False
+    if unit.caseIds & thread.seenCaseIds:
+        return True
+    if unit.elementAnchor and unit.elementAnchor == last.elementAnchor and IsCaseSpecificAnchor(unit.elementAnchor):
+        return True
+
+    baseScore = appDomainWeight * AppDomainSimilarity(unit, thread) + textWeight * TextOverlap(unit, thread)
+    score = baseScore * TimeDecay(gapSeconds, resumeWindowSeconds)
+    if BoundarySignalBetween(last.endTs, unit.startTs, boundaryTsSorted):
+        score -= 0.3
+    return score >= joinThreshold
