@@ -24,6 +24,7 @@ def IsWorkEvent(event: dict[str, Any]) -> bool:
     if event["event_type"] == "keystroke" and event.get("payload", {}).get("key_action") == "release":
         return False
     return True
+#-----------------------------------------------------------------------------------------------
 
 @dataclass
 class MicroUnit:
@@ -37,19 +38,6 @@ class MicroUnit:
     caseIds: set[str]
     textTokens: set[str]
     isBoundarySignal: bool
-    
-@dataclass
-class Thread:
-    threadId = None
-    events = None
-    recentApps = None
-    allApps = None
-    lastDomain = None
-    lastPath = None
-    lastTs = None
-
-    def __init__(self, threadId: int):
-        self.threadId = threadId
 
 def sameRun(
         prevAction: str,
@@ -112,15 +100,44 @@ def buildMicroUnits(events: list[dict[str, Any]]) -> list[MicroUnit]:
     addUnitNClear()
     return units
 
-def ExtractWork(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    workEvents = [e for e in events if e.get("event_type") not in nonWorkEventTypes]
+#-----------------------------------------------------------------------------------------------
 
-    openThreads: Dict[int,Thread] = {}
-    nextThreadId = 2
-    openThreads[1] = Thread(threadId=1)
-    for event in workEvents:
-        sig = EventSignature(event)
-        ts = event["normalized_ts"]
+@dataclass
+class Thread:
+    threadId: int
+    units: list[MicroUnit] = field(default_factory=list)
+    seenCaseIds: set[str] = field(default_factory=set)
+    recentApps: list[str] = field(default_factory=list)
+    textTokens: set[str] = field(default_factory=set)
 
-        
-    return workEvents
+    def lastUnit(self) -> MicroUnit:
+        return self.units[-1]
+
+    def attach(self, unit: MicroUnit) -> None:
+        self.units.append(unit)
+        if unit.app:
+            self.recentApps.append(unit.app)
+            self.recentApps = self.recentApps[-5:]
+        self.seenCaseIds |= unit.caseIds
+        self.textTokens |= unit.textTokens
+
+def AppDomainSimilarity(unit: MicroUnit, thread: Thread) -> float:
+    # range: [0.0, 1.0]. appScore in {0.0, 0.4, 1.0}, locationScore in {0.0, 0.6, 0.9};
+    last = thread.lastUnit()
+
+    if unit.app and unit.app == last.app:
+        appScore = 1.0
+    elif unit.app and unit.app in thread.recentApps:
+        appScore = 0.4
+    else:
+        appScore = 0.0
+
+    if unit.domain and unit.domain == last.domain:
+        locationScore = 0.9 if unit.path and unit.path == last.path else 0.6
+    else:
+        locationScore = 0.0
+
+    return 1 - (1 - appScore) * (1 - locationScore)
+
+
+
