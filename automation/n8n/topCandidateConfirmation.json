@@ -14,7 +14,7 @@
     },
     {
       "parameters": {
-        "url": "http://host.docker.internal:5133/queue",
+        "url": "http://127.0.0.1:5133/queue",
         "options": {}
       },
       "id": "getQueue",
@@ -97,7 +97,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=http://host.docker.internal:5133/queue/{{ $json.caseId }}/approve",
+        "url": "=http://127.0.0.1:5133/queue/{{ $json.caseId }}/approve",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"note\": {{ JSON.stringify($json.note) }}\n}",
@@ -115,7 +115,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=http://host.docker.internal:5133/queue/{{ $json.caseId }}/flag",
+        "url": "=http://127.0.0.1:5133/queue/{{ $json.caseId }}/flag",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"reason\": {{ JSON.stringify($json.reason) }}\n}",

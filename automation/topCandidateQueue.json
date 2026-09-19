@@ -5,7 +5,8 @@
     "changeType": "Dependent Deduction Change",
     "effectiveDate": "2026-07-08",
     "requiresManagerApproval": false,
-    "status": "pending"
+    "status": "approved",
+    "note": "Payroll change registered. Change type: Dependent Deduction Change. Effective date: 2026-07-08. Confirmation complete."
   },
   {
     "caseId": "P0-2026-8842",
@@ -13,7 +14,8 @@
     "changeType": "Overtime Allowance Adjustment",
     "effectiveDate": "2026-07-08",
     "requiresManagerApproval": false,
-    "status": "pending"
+    "status": "approved",
+    "note": "Payroll change registered. Change type: Overtime Allowance Adjustment. Effective date: 2026-07-08. Confirmation complete."
   },
   {
     "caseId": "P0-2026-8843",
@@ -21,7 +23,8 @@
     "changeType": "Pay Raise",
     "effectiveDate": "2026-07-10",
     "requiresManagerApproval": true,
-    "status": "pending"
+    "status": "flagged",
+    "reason": "requires manager approval: Pay Raise"
   },
   {
     "caseId": "P0-2026-8844",
@@ -29,7 +32,8 @@
     "changeType": "Position Allowance Establishment",
     "effectiveDate": "2026-07-10",
     "requiresManagerApproval": true,
-    "status": "pending"
+    "status": "flagged",
+    "reason": "requires manager approval: Position Allowance Establishment"
   },
   {
     "caseId": "P0-2026-8845",
@@ -37,6 +41,7 @@
     "changeType": "Position Allowance Abolition",
     "effectiveDate": "2026-07-12",
     "requiresManagerApproval": true,
-    "status": "pending"
+    "status": "flagged",
+    "reason": "requires manager approval: Position Allowance Abolition"
   }
 ]

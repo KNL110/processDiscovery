@@ -62,13 +62,13 @@ class Handler(BaseHTTPRequestHandler):
         saveQueue(queue)
         self._sendJson(200, case)
 
-    def log_message(self, fmt, *args):
+    def log_message(self, fmt, *args): # type: ignore
         print(f"[mockPortalApi] {self.address_string()} {fmt % args}")
 
 
 if __name__ == "__main__":
     port = 5133
     print(f"Mock portal (topCandidateQueue.json) on http://0.0.0.0:{port}  (Ctrl+C to stop)")
-    # binds all interfaces, not just localhost, so the n8n Docker container can reach it
-    # via host.docker.internal
+    # binds all interfaces, not just localhost, so the n8n Docker container can reach
+    # it via localhost (--network host, Linux) or host.docker.internal (Docker Desktop)
     HTTPServer(("0.0.0.0", port), Handler).serve_forever()

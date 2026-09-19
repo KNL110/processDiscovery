@@ -18,9 +18,9 @@ actually read and modify without an engineer.
 # terminal 1: the mock portal (binds 0.0.0.0 so the n8n container can reach it)
 python3 automation/mockPortalApi.py
 
-# terminal 2: n8n via Docker
-docker run -it --rm --name n8n -p 5678:5678 \
-  --add-host=host.docker.internal:host-gateway \
+# terminal 2: n8n via Docker (host networking - most reliable on native Linux
+# Docker, where host.docker.internal DNS resolution can hang/fail)
+docker run -it --rm --name n8n --network host \
   -v n8n_data:/home/node/.n8n \
   n8nio/n8n
 ```
@@ -38,6 +38,10 @@ and click **Execute Workflow**.
 fields) → `Is Routine?` (IF node) → `Approve` (`POST /queue/<id>/approve`) or
 `Flag` (`POST /queue/<id>/flag`).
 
-`--add-host=host.docker.internal:host-gateway` is needed on Linux Docker for the
-container to reach the host's `mockPortalApi.py`; Docker Desktop (Mac/Windows)
-resolves `host.docker.internal` without it, but the flag is harmless there too.
+The workflow's HTTP nodes call `http://127.0.0.1:5133` (not `localhost`, to
+avoid the container resolving it to the IPv6 loopback where nothing listens),
+which only reaches the host's `mockPortalApi.py` under `--network host`
+(Linux). On Docker Desktop (Mac/Windows), `--network host` isn't supported -
+use `-p 5678:5678 --add-host=host.docker.internal:host-gateway` instead and
+swap `127.0.0.1:5133` for `host.docker.internal:5133` in the three HTTP
+Request nodes.

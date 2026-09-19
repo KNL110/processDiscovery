@@ -25,3 +25,40 @@
 - built `analysis/apps.py`(using copilot): inventories every distinct app across all sessions in both datasets (22 in A, 12 in B, 9 shared) -- useful for auditing which apps should count as noise
 
 ## Day 5
+
+- mid-semester exam, no work done
+
+## Day 6
+
+- fixed `appDomainSimilarity`: was scoring 1.0 for any app seen in the last 5
+  units, not just the immediately preceding one; and path/domain/app signals
+  were overwriting each other (`max`) instead of aggregating (noisy-OR)
+- fixed `SpansCanTouch`'s bounding-box overlap check, which degenerated to
+  near-always-true once threads had a few units (their outer span outgrows
+  `resumeWindowSeconds` fast) — replaced with a real two-pointer merge scan
+- rewrote `AssignThreads` from single-pass greedy to agglomerative: every unit
+  starts as its own thread, best-scoring admissible merge applied repeatedly
+  via a heap; a merge interleaves two threads by time and validates every new
+  cross-adjacency, so one bad link rejects the whole merge
+- fixed `normalizedTs`/`timestampDt` naming mismatch between `ingest.py` and
+  `segmentation.py` that made `buildMicroUnits` crash on real data
+- built the missing Step 1 glue: `labeling.py` (fingerprint clustering),
+  `metrics.py` (IoU matching + purity/V-measure/ARI against `gt_manifest.json`,
+  no `sklearn`), `pipeline.py`, three driver scripts
+- found and fixed a real bug: labels were assigned per-session, so the same
+  process got different labels across sessions — labeling now runs once over
+  the whole dataset
+- tuned `minThreadUnits` and `similarityThreshold` against Dataset A: boundary
+  F1 0.16 → 0.43, label purity 0.28 → 0.40 (measured correctly only after the
+  per-session labeling bug was fixed) — ran the sweeps and cross-checked the
+  metric numbers with VSCode Copilot alongside Claude
+- verified `AssignThreads`/`ContinuationScore` behavior against real data (unit
+  conservation, time ordering, brute-force cross-check on `SpansCanTouch`)
+  using Copilot in VSCode for a second opinion on the test cases
+- built Step 2 (`analysis.py`): DFG branching factor, priority ranking, and a
+  handling-patterns metric — which surfaced that the top 3 labels each mix five
+  real HR review sub-flows instead of isolating one apiece
+- built Step 3 automation for the most frequent real sub-flow (payroll-item
+  confirmation, 43% of segments) as an n8n workflow, since only browser UI
+  interaction was ever observed in the logs, not API traffic — used Copilot in
+  VSCode for part of the n8n node/JSON structure and the mock portal script
