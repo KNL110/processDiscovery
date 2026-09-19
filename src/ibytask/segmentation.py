@@ -140,8 +140,20 @@ def AppDomainSimilarity(unit: MicroUnit, thread: Thread) -> float:
     return 1 - (1 - appScore) * (1 - locationScore)
 
 
+# probabilistic measure of text overlap between a unit and a thread, range: [0.0, 1.0]
 def TextOverlap(unit: MicroUnit, thread: Thread) -> float:
     if not unit.textTokens or not thread.textTokens:
         return 0.0
     union = unit.textTokens | thread.textTokens
     return len(unit.textTokens & thread.textTokens) / len(union) if union else 0.0
+
+def boundarySignalBetween(fromTs, toTs, boundaryTsSorted: list) -> bool:
+    for ts in boundaryTsSorted:
+        if ts <= fromTs:
+            continue
+        if ts >= toTs:
+            break
+        return True
+    return False
+
+
